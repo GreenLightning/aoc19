@@ -1,0 +1,26 @@
+{
+	"build_systems":
+	[
+		{
+			"name": "Build",
+			"shell_cmd": "go build || echo Advent, Advent, der Code, der brennt!",
+			"file_regex": "^(?:\\.\\\\)?(.+?):(\\d+?):(?:(\\d+?):)? (.+)$",
+			"working_dir": "$file_path"
+		}
+	],
+	"folders":
+	[
+		{
+			"path": "."
+		},
+		{
+			"path": "../aoc18"
+		},
+		{
+			"path": "../aoc17"
+		},
+		{
+			"path": "../aoc16"
+		}
+	]
+}
