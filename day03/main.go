@@ -12,8 +12,7 @@ import (
 func main() {
 	lines := readLines("input.txt")
 
-	var grid [50000][50000]int
-	origin := Vector2{x: 25000, y: 25000}
+	grid := make(map[Vector2]int)
 
 	parseSegment := func(segment string) (dir Vector2, length int) {
 		switch segment[0] {
@@ -30,28 +29,28 @@ func main() {
 		return
 	}
 
-	pos, steps := origin, 0
+	pos, steps := Vector2{}, 0
 	for _, segment := range strings.Split(lines[0], ",") {
 		dir, length := parseSegment(segment)
 		for i := 0; i < length; i++ {
 			pos = pos.Plus(dir)
 			steps++
-			grid[pos.y][pos.x] = steps
+			grid[pos] = steps
 		}
 	}
 
 	closestManhatten, closestSteps := math.MaxInt32, math.MaxInt32
 
-	pos, steps = origin, 0
+	pos, steps = Vector2{}, 0
 	for _, segment := range strings.Split(lines[1], ",") {
 		dir, length := parseSegment(segment)
 		for i := 0; i < length; i++ {
 			pos = pos.Plus(dir)
 			steps++
-			if grid[pos.y][pos.x] != 0 {
-				distance := pos.ManhattenDistance(origin)
+			if grid[pos] != 0 {
+				distance := pos.ManhattenLength()
 				closestManhatten = min(closestManhatten, distance)
-				totalSteps := grid[pos.y][pos.x] + steps
+				totalSteps := grid[pos] + steps
 				closestSteps = min(closestSteps, totalSteps)
 			}
 		}
