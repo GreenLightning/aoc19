@@ -15,6 +15,13 @@ func pow(a, b int) int {
 	return p
 }
 
+func gcd(a, b int) int {
+	for b != 0 {
+		a, b = b, a%b
+	}
+	return a
+}
+
 func allPermutations(values []string) (result [][]string) {
 	if len(values) == 1 {
 		result = append(result, values)
