@@ -25,6 +25,20 @@ func (v Vector2) Times(factor int) Vector2 {
 	}
 }
 
+func (v Vector2) Min(other Vector2) Vector2 {
+	return Vector2{
+		x: min(v.x, other.x),
+		y: min(v.y, other.y),
+	}
+}
+
+func (v Vector2) Max(other Vector2) Vector2 {
+	return Vector2{
+		x: max(v.x, other.x),
+		y: max(v.y, other.y),
+	}
+}
+
 func (v Vector2) LengthSquared() int {
 	return v.x*v.x + v.y*v.y
 }
