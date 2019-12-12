@@ -22,6 +22,10 @@ func gcd(a, b int) int {
 	return a
 }
 
+func lcm(a, b int) int {
+	return a / gcd(a, b) * b
+}
+
 func allPermutations(values []string) (result [][]string) {
 	if len(values) == 1 {
 		result = append(result, values)
