@@ -58,15 +58,32 @@ func main() {
 	{
 		fmt.Println("--- Part Two ---")
 		availableOre := 1_000_000_000_000
-		fuel := availableOre / oreRequiredForOneFuel // we can make at least this much fuel
-		required := map[string]int{"FUEL": fuel}
+		fuel, step := 0, availableOre/oreRequiredForOneFuel
+		required := make(map[string]int)
 		for {
-			required["FUEL"]++ // try to make one more fuel
-			reduce(required, reactions)
-			if required["ORE"] > availableOre {
-				break
+			test := make(map[string]int) // make a copy of required
+			for name, amount := range required {
+				test[name] = amount
 			}
-			fuel++
+
+			test["FUEL"] += step
+			reduce(test, reactions)
+
+			if test["ORE"] <= availableOre {
+				// We have made an additional step amount of fuel.
+				fuel += step
+				required = test
+				continue
+			}
+
+			if step > 1 {
+				// Step size was too big.
+				step /= 2
+				continue
+			}
+
+			// We cannot make one more fuel.
+			break
 		}
 		fmt.Println(fuel)
 	}
