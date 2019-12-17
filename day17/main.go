@@ -179,41 +179,17 @@ type MoveList []string
 //   functions - functions that have already been fixed
 // Return value: list of valid programs, each of which contains 4 functions (main, A, B and C)
 func compressPath(path MoveList, fragments []MoveList, functions []MoveList) (result [][4]MoveList) {
-	if len(functions) == 2 {
-		// The last function must be the shortest remaining fragment.
-		var lastFunction MoveList
+	if len(functions) == 3 {
+		// The main function cannot call movement commands,
+		// so there must not be any commands left.
 		if len(fragments) != 0 {
-			lastFunction = fragments[0]
-		}
-		for _, fragment := range fragments {
-			if len(fragment) < len(lastFunction) {
-				lastFunction = fragment
-			}
-		}
-
-		// Check memory limit.
-		if len(strings.Join(lastFunction, ",")) > 20 {
 			return nil
 		}
-
-		// Each remaining fragment must equal the last function (or multiple copies thereof).
-		for _, fragment := range fragments {
-			for hasPrefix(fragment, lastFunction) {
-				fragment = fragment[len(lastFunction):]
-			}
-			if len(fragment) != 0 {
-				return nil
-			}
-		}
-
-		newFunctions := make([]MoveList, 0, 3)
-		newFunctions = append(newFunctions, functions...)
-		newFunctions = append(newFunctions, lastFunction)
 
 		// Replace path with function calls to compute main function.
 		var mainFunction MoveList
 		for len(path) != 0 {
-			for i, function := range newFunctions {
+			for i, function := range functions {
 				if hasPrefix(path, function) {
 					mainFunction = append(mainFunction, string('A'+i))
 					path = path[len(function):]
@@ -228,26 +204,35 @@ func compressPath(path MoveList, fragments []MoveList, functions []MoveList) (re
 
 		var program [4]MoveList
 		program[0] = mainFunction
-		program[1] = newFunctions[0]
-		program[2] = newFunctions[1]
-		program[3] = newFunctions[2]
+		program[1] = functions[0]
+		program[2] = functions[1]
+		program[3] = functions[2]
 
 		result = append(result, program)
 		return
 	}
 
-	visited := make(map[string]bool)
+	if len(fragments) == 0 {
+		// Add empty candidate to functions.
+		newFunctions := make([]MoveList, 0, 3)
+		newFunctions = append(newFunctions, functions...)
+		newFunctions = append(newFunctions, MoveList{})
 
-	// Collect unique candidates.
+		subresult := compressPath(path, fragments, newFunctions)
+		result = append(result, subresult...)
+		return
+	}
+
+	// Checking the first fragment is enough.
+	fragment := fragments[0]
+
+	// Collect candidates.
 	var candidates []MoveList
-	for _, fragment := range fragments {
-		for length := 1; length <= len(fragment); length++ {
-			candidate := fragment[:length]
-			text := strings.Join(candidate, ",")
-			if len(text) <= 20 && !visited[text] {
-				visited[text] = true
-				candidates = append(candidates, candidate)
-			}
+	for length := 1; length <= len(fragment); length++ {
+		candidate := fragment[:length]
+		text := strings.Join(candidate, ",")
+		if len(text) <= 20 {
+			candidates = append(candidates, candidate)
 		}
 	}
 
