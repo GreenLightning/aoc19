@@ -173,7 +173,12 @@ func main() {
 
 type MoveList []string
 
-func compressPath(path MoveList, fragments []MoveList, functions []MoveList) (result [][]MoveList) {
+// Parameters:
+//   path - full path to compress
+//   fragments - parts of the path that are not yet part of a function
+//   functions - functions that have already been fixed
+// Return value: list of valid programs, each of which contains 4 functions (main, A, B and C)
+func compressPath(path MoveList, fragments []MoveList, functions []MoveList) (result [][4]MoveList) {
 	if len(functions) == 2 {
 		// The last function must be the shortest remaining fragment.
 		var lastFunction MoveList
@@ -221,9 +226,11 @@ func compressPath(path MoveList, fragments []MoveList, functions []MoveList) (re
 			return nil
 		}
 
-		program := make([]MoveList, 0, 4)
-		program = append(program, mainFunction)
-		program = append(program, newFunctions...)
+		var program [4]MoveList
+		program[0] = mainFunction
+		program[1] = newFunctions[0]
+		program[2] = newFunctions[1]
+		program[3] = newFunctions[2]
 
 		result = append(result, program)
 		return
