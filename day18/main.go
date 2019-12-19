@@ -2,7 +2,6 @@ package main
 
 import (
 	"bufio"
-	"container/heap"
 	"fmt"
 	"math"
 	"os"
@@ -17,16 +16,20 @@ var (
 
 var directions = []Vector2{Up, Down, Left, Right}
 
-// An entity can be an entrance, a key or a door.
+// An entity can be an entrance or a key.
 type Entity struct {
-	Char     byte
-	Index    int
-	Position Vector2
-	Edges    []Edge
+	Char        byte
+	Position    Vector2
+	Connections []Connection
 }
 
-type Edge struct {
-	Neighbor *Entity
+// A connection represents a path from an entity to a key. Note that there are
+// no connections back to an entrance, because we never want to go there
+// explicitly (but we might walk over an entrance implicitly by following
+// another connection).
+type Connection struct {
+	Key      *Entity
+	Required uint32
 	Distance int
 }
 
@@ -93,10 +96,9 @@ func run(grid [][]byte) int {
 			if isKey(char) {
 				numKeys++
 			}
-			if isEntrance(char) || isKey(char) || isDoor(char) {
+			if isEntrance(char) || isKey(char) {
 				entities[char] = &Entity{
 					Char:     char,
-					Index:    len(entities),
 					Position: Vector2{x, y},
 				}
 			}
@@ -105,13 +107,15 @@ func run(grid [][]byte) int {
 
 	// Connect the entities, by exploring the grid around each one.
 	for _, entity := range entities {
+
 		type Item struct {
 			Position Vector2
+			Required uint32
 			Distance int
 		}
 
 		var open []Item
-		open = append(open, Item{entity.Position, 0})
+		open = append(open, Item{entity.Position, 0, 0})
 
 		visited := make(map[Vector2]bool)
 		visited[entity.Position] = true
@@ -127,13 +131,25 @@ func run(grid [][]byte) int {
 				}
 
 				char := grid[next.y][next.x]
-				if char == '.' {
+				if char == '.' || isEntrance(char) {
+					// We can walk over these tiles regularly.
 					visited[next] = true
-					open = append(open, Item{next, current.Distance + 1})
-				} else if isEntrance(char) || isKey(char) || isDoor(char) {
+					open = append(open, Item{next, current.Required, current.Distance + 1})
+				} else if isDoor(char) {
+					// If it is a door, we must have the key for the door.
 					visited[next] = true
-					entity.Edges = append(entity.Edges, Edge{
-						Neighbor: entities[char],
+					open = append(open, Item{next, current.Required | bitFromDoor(char), current.Distance + 1})
+				} else if isKey(char) {
+					// If it is a key, we must have the key to walk over it.
+					// This prevents walking over a key without picking it up.
+					visited[next] = true
+					open = append(open, Item{next, current.Required | bitFromKey(char), current.Distance + 1})
+
+					// We also record the connection to the key,
+					// which obviously does not require the key itself.
+					entity.Connections = append(entity.Connections, Connection{
+						Key:      entities[char],
+						Required: current.Required,
 						Distance: current.Distance + 1,
 					})
 				}
@@ -151,75 +167,44 @@ func run(grid [][]byte) int {
 
 	// Find shortest path.
 	var allKeys uint32 = (1 << numKeys) - 1
-	return find(entities, positions, 0, allKeys, 0, math.MaxInt32)
+	return find(positions, 0, allKeys, 0, math.MaxInt32)
 }
 
-func find(entities map[byte]*Entity, positions []*Entity, unlocked uint32, allKeys uint32, currentDistance, bestDistance int) int {
+func find(positions []*Entity, unlocked uint32, allKeys uint32, currentDistance, bestDistance int) int {
 	// If we have collected all keys, we have reached the end of the path.
 	if isUnlocked(unlocked, allKeys) {
 		return currentDistance
 	}
 
-	// Find the keys we can reach.
-	var keys []Key
+	// Try all reachable keys.
 	for index, position := range positions {
-		keys = append(keys, explore(entities, index, position, unlocked)...)
-	}
+		for _, conn := range position.Connections {
+			if !isUnlocked(unlocked, conn.Required) {
+				// We do not yet have all the keys required to walk this way.
+				continue
+			}
 
-	// If we cannot reach any more keys, the path is invalid.
-	if len(keys) == 0 {
-		return math.MaxInt32
-	}
+			if isUnlocked(unlocked, bitFromKey(conn.Key.Char)) {
+				// We have already collected this key.
+				// Do not go there again.
+				continue
+			}
 
-	// Try all keys.
-	for _, key := range keys {
-		newDistance := currentDistance + key.Distance
-		if newDistance <= bestDistance {
+			newDistance := currentDistance + conn.Distance
+			if newDistance > bestDistance {
+				continue
+			}
+
 			newPositions := make([]*Entity, len(positions))
 			copy(newPositions, positions)
-			newPositions[key.Index] = key.Entity
-			newUnlocked := unlocked | bitFromKey(key.Entity.Char)
-			distance := find(entities, newPositions, newUnlocked, allKeys, newDistance, bestDistance)
+			newPositions[index] = conn.Key
+			newUnlocked := unlocked | bitFromKey(conn.Key.Char)
+			distance := find(newPositions, newUnlocked, allKeys, newDistance, bestDistance)
 			bestDistance = min(bestDistance, distance)
 		}
 	}
 
 	return bestDistance
-}
-
-type Key struct {
-	Entity   *Entity
-	Index    int
-	Distance int
-}
-
-func explore(entities map[byte]*Entity, index int, position *Entity, unlocked uint32) (keys []Key) {
-	var open PriorityQueue
-	open.Push(&PriorityItem{position, 0})
-
-	visited := make([]bool, len(entities))
-	visited[position.Index] = true
-
-	for !open.Empty() {
-		current := open.Pop()
-
-		for _, edge := range current.Entity.Edges {
-			if visited[edge.Neighbor.Index] {
-				continue
-			}
-
-			if isEntrance(edge.Neighbor.Char) || isKey(edge.Neighbor.Char) || (isDoor(edge.Neighbor.Char) && isUnlocked(unlocked, bitFromDoor(edge.Neighbor.Char))) {
-				visited[edge.Neighbor.Index] = true
-				if isKey(edge.Neighbor.Char) && !isUnlocked(unlocked, bitFromKey(edge.Neighbor.Char)) {
-					keys = append(keys, Key{edge.Neighbor, index, current.Distance + edge.Distance})
-				} else {
-					open.Push(&PriorityItem{edge.Neighbor, current.Distance + edge.Distance})
-				}
-			}
-		}
-	}
-
-	return
 }
 
 func isEntrance(char byte) bool {
@@ -244,57 +229,6 @@ func bitFromDoor(char byte) uint32 {
 
 func isUnlocked(unlocked uint32, bits uint32) bool {
 	return unlocked&bits == bits
-}
-
-type PriorityItem struct {
-	Entity   *Entity
-	Distance int
-}
-
-type PriorityStorage []*PriorityItem
-
-func (s PriorityStorage) Len() int {
-	return len(s)
-}
-
-func (s PriorityStorage) Less(i, j int) bool {
-	return s[i].Distance < s[j].Distance
-}
-
-func (s PriorityStorage) Swap(i, j int) {
-	s[i], s[j] = s[j], s[i]
-}
-
-func (s *PriorityStorage) Push(x interface{}) {
-	item := x.(*PriorityItem)
-	*s = append(*s, item)
-}
-
-func (s *PriorityStorage) Pop() interface{} {
-	len := len(*s)
-	item := (*s)[len-1]
-	*s = (*s)[:len-1]
-	return item
-}
-
-type PriorityQueue struct {
-	storage PriorityStorage
-}
-
-func (q *PriorityQueue) Len() int {
-	return len(q.storage)
-}
-
-func (q *PriorityQueue) Empty() bool {
-	return len(q.storage) == 0
-}
-
-func (q *PriorityQueue) Push(item *PriorityItem) {
-	heap.Push(&q.storage, item)
-}
-
-func (q *PriorityQueue) Pop() *PriorityItem {
-	return heap.Pop(&q.storage).(*PriorityItem)
 }
 
 type Vector2 struct {
