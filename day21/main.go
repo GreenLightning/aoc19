@@ -24,10 +24,7 @@ OR T J
 AND D J
 NOT E T
 NOT T T
-AND F T
-AND G T
 OR H T
-OR E T
 AND T J
 RUN
 `
