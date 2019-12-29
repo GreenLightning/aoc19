@@ -159,9 +159,9 @@ func main() {
 				} else if !ok {
 					fmt.Print("?")
 				} else if value == Path {
-					fmt.Print(" ")
+					fmt.Print(".")
 				} else {
-					fmt.Print("█")
+					fmt.Print("#")
 				}
 			}
 			fmt.Println()

@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"flag"
 	"fmt"
 	"math"
 	"os"
@@ -9,7 +10,11 @@ import (
 	"strconv"
 )
 
+var printFlag = flag.Bool("print", false, "print map as the 200th asteroid is destroyed")
+
 func main() {
+	flag.Parse()
+
 	lines := readLines("input.txt")
 
 	asteroids := make(map[Vector2]bool)
@@ -58,10 +63,31 @@ func main() {
 		}
 	}
 
+	target := vaporizationOrder[199]
+
 	{
 		fmt.Println("--- Part Two ---")
-		target := vaporizationOrder[199]
 		fmt.Println(target.x*100 + target.y)
+	}
+
+	if *printFlag {
+		for _, asteroid := range vaporizationOrder[200:] {
+			asteroids[asteroid] = true
+		}
+		for y, line := range lines {
+			for x := range line {
+				if x == bestLocation.x && y == bestLocation.y {
+					fmt.Print("X")
+				} else if x == target.x && y == target.y {
+					fmt.Print("O")
+				} else if asteroids[Vector2{x, y}] {
+					fmt.Print("#")
+				} else {
+					fmt.Print(".")
+				}
+			}
+			fmt.Println()
+		}
 	}
 }
 

@@ -62,9 +62,9 @@ func main() {
 			for x := 0; x < width; x++ {
 				switch image[y*width+x] {
 				case 0:
-					fmt.Print(" ")
+					fmt.Print(".")
 				case 1:
-					fmt.Print("█")
+					fmt.Print("#")
 				default:
 					fmt.Print("?")
 				}

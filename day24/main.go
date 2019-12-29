@@ -2,11 +2,18 @@ package main
 
 import (
 	"bufio"
+	"flag"
 	"fmt"
 	"os"
 )
 
+type Layer [5][5]bool
+
+var printFlag = flag.Bool("print", false, "print final state for part two")
+
 func main() {
+	flag.Parse()
+
 	lines := readLines("input.txt")
 
 	{
@@ -59,8 +66,6 @@ func main() {
 
 	{
 		fmt.Println("--- Part Two ---")
-
-		type Layer [5][5]bool
 
 		var layer Layer
 		for y, line := range lines {
@@ -160,17 +165,48 @@ func main() {
 
 		bugs := 0
 		for _, layer := range state {
-			for y := 0; y < 5; y++ {
-				for x := 0; x < 5; x++ {
-					if layer[y][x] {
-						bugs++
-					}
-				}
-			}
+			bugs += count(layer)
 		}
 
 		fmt.Println(bugs)
+
+		if *printFlag {
+			for count(state[min]) == 0 && min < max {
+				min++
+			}
+			for count(state[max]) == 0 && min < max {
+				max--
+			}
+			for index := min; index <= max; index++ {
+				layer := state[index]
+
+				fmt.Printf("Depth %d:\n", index)
+				for y := 0; y < 5; y++ {
+					for x := 0; x < 5; x++ {
+						if y == 2 && x == 2 {
+							fmt.Print("?")
+						} else if layer[y][x] {
+							fmt.Print("#")
+						} else {
+							fmt.Print(".")
+						}
+					}
+					fmt.Println()
+				}
+			}
+		}
 	}
+}
+
+func count(layer Layer) (bugs int) {
+	for y := 0; y < 5; y++ {
+		for x := 0; x < 5; x++ {
+			if layer[y][x] {
+				bugs++
+			}
+		}
+	}
+	return
 }
 
 func readLines(filename string) []string {

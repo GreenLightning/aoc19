@@ -34,9 +34,9 @@ func main() {
 		for y := min.y; y <= max.y; y++ {
 			for x := min.x; x <= max.x; x++ {
 				if grid[Vector2{x, y}] == 1 {
-					fmt.Print("█")
+					fmt.Print("#")
 				} else {
-					fmt.Print(" ")
+					fmt.Print(".")
 				}
 			}
 			fmt.Println()
